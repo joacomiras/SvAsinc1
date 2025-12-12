@@ -14,6 +14,7 @@ const char pagina_template[] PROGMEM = R"rawliteral(
 <head>
 <meta charset="UTF-8">
 <title>Monitor de luz ambiental</title>
+<!-- Deberias poner el refresh asi se actualiza el valor cada 1 seg-->
 <style> /* el style siempre lo hago una vez termino el html, así se como nombro cada cosa /*
 body{
   background-color: COLOR-FONDO; /* color-fondo como un placeholder */
@@ -44,9 +45,10 @@ body{
 </html>
 )rawliteral";
 
-String generarPagina(){ 
-  int lectura=analogRead(ldrPin);
-  int porcentaje=map(lectura,0,4095,0,100);
+String generarPagina(AsyncWebServerRequest *request){ //_falto el AsyncWebServerRequest *request
+  String pagina = pagina_template; //hay casos donde el string este de pagina_template se pone adentro del void handleRootrequest, no sé bien en qué casos va ahí o por separado
+  //_ int lectura=analogRead(ldrPin); -> leo en el loop
+  //_ int porcentaje=map(lectura,0,4095,0,100); -> lo hago en el loop
   String color;
   if (porcentaje>70){
     color="#f1c40f";
@@ -55,11 +57,16 @@ String generarPagina(){
   } else {
     color="#2c3e50";
   }
-}
-  String pagina = pagina_template; //hay casos donde el string este de pagina_template se pone adentro del void handleRootrequest, no sé bien en qué casos va ahí o por separado
 pagina.replace("PORCENTAJE",String(porcentaje));
 pagina.replace("COLOR-FONDO",color);
-return pagina;
+//_ falta mandar la pagina
+  request->send(200,"text/html",pagina);
+
+}/*_ ESTO VA ADENTRO DE LA FUNCION 
+pagina.replace("PORCENTAJE",String(porcentaje));
+pagina.replace("COLOR-FONDO",color);
+*/
+
  
 void setup(){
   Serial.begin(115200);
@@ -72,8 +79,7 @@ void setup(){
     Serial.print(".");
     timeout--;
   }
-  if (WiFi.Status()!WL_CONNECTED){
-  }
+  if (WiFi.Status()!WL_CONNECTED){//_ Acá habia mal una llave
   Serial.println("\nFallo la conexion. Reiniciando..");
   delay(1000);
   ESP.restart();
@@ -82,9 +88,17 @@ void setup(){
   Serial.print("IP del servidor: http://");
   serial.println(WiFi.localIP());
 
+/*_ AL HACER UNA FUNCION QUEDA ASI EL SERVER ON
 server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-  request->send(200,"text/html",generarPagina);
-});
-server.begin();
 
-void loop(){}
+  request->send(200,"text/html",generarPagina); -> mal porque no mandas la funcion, solo el html
+}); */
+server.on("/",HTTP_GET,generarPagina);
+server.begin();
+}
+  
+void loop(){
+  int lectura=analogRead(ldrPin);
+  int porcentaje=map(lectura,0,4095,0,100);
+  //_ lo hago acá para leer siempre el valor del pote
+}
